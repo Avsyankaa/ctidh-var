@@ -235,317 +235,526 @@ fp_sub3:
     add rsp, pbytes
     ret
 
+#ifdef _ADX_
 
-/* Montgomery arithmetic */
+.macro MUL384_SCHOOL M0, M1, C, S, T0, T1, T2, T3, T4, T5, T6, T7 
+    mov    rdx, \M0
+    mulx   \T0, \T1, \M1    
+    mulx   \T2, \T3, 8\M1
+    mov    \C, \T1             // C0_final 
+    xor    rax, rax
+    mulx   \T4, \T5, 16\M1 
+    adox   \T0, \T3               
+    adox   \T2, \T5     
+    mulx   \T1, \T3, 24\M1
+    adox   \T4, \T3         
+    mulx   \T5, \T6, 32\M1 
+    adox   \T1, \T6        
+    mulx   \T3, \T7, 40\M1    
+    adox   \T5, \T7       
+    adox   \T3, rax        
+    
+    mov    rdx, 8\M0 
+    mulx   \T6, \T7, \M1 
+    xor    rax, rax
+    adcx   \T0, \T7 
+    mov    8\C, \T0            // C1_final 
+    adcx   \T2, \T6     
+    mulx   \T6, \T7, 8\M1
+    adox   \T2, \T7 
+    adcx   \T4, \T6        
+    mulx   \T0, \T6, 16\M1 
+    adox   \T4, \T6  
+    adcx   \T0, \T1     
+    mulx   \T1, \T7, 24\M1   
+    adcx   \T1, \T5  
+    mulx   \T5, \T6, 32\M1     
+    adcx   \T3, \T5   
+    mulx   \T5, rdx, 40\M1
+    adcx   \T5, rax 
+        
+    adox   \T0, \T7  
+    adox   \T1, \T6  
+    adox   \T3, rdx  
+    adox   \T5, rax         
+    
+    mov    rdx, 16\M0 
+    mulx   \T6, \T7, \M1
+    xor    rax, rax 
+    adcx   \T2, \T7 
+    mov    16\C, \T2           // C2_final 
+    adcx   \T4, \T6     
+    mulx   \T6, \T7, 8\M1
+    adox   \T4, \T7 
+    adcx   \T0, \T6        
+    mulx   \T2, \T6, 16\M1
+    adox   \T0, \T6 
+    adcx   \T1, \T2     
+    mulx   \T2, \T7, 24\M1   
+    adcx   \T3, \T2  
+    mulx   \T2, \T6, 32\M1     
+    adcx   \T5, \T2   
+    mulx   \T2, rdx, 40\M1     
+    adcx   \T2, rax 
+         
+    adox   \T1, \T7  
+    adox   \T3, \T6  
+    adox   \T5, rdx 
+    adox   \T2, rax           
+    
+    mov    rdx, 24\M0 
+    mulx   \T6, \T7, \M1
+    xor    rax, rax 
+    adcx   \T4, \T7 
+    mov    24\C, \T4           // C3_final 
+    adcx   \T0, \T6     
+    mulx   \T6, \T7, 8\M1
+    adox   \T0, \T7
+    adcx   \T1, \T6        
+    mulx   \T4, \T6, 16\M1
+    adox   \T1, \T6  
+    adcx   \T3, \T4     
+    mulx   \T4, \T7, 24\M1   
+    adcx   \T5, \T4  
+    mulx   \T4, \T6, 32\M1     
+    adcx   \T2, \T4   
+    mulx   \T4, rdx, 40\M1     
+    adcx   \T4, rax
+        
+    adox   \T3, \T7  
+    adox   \T5, \T6  
+    adox   \T2, rdx  
+    adox   \T4, rax         
+    
+    mov    rdx, 32\M0 
+    mulx   \T6, \T7, \M1 
+    xor    rax, rax
+    adcx   \T0, \T7 
+    mov    32\C, \T0           // C4_final 
+    adcx   \T1, \T6     
+    mulx   \T6, \T7, 8\M1
+    adox   \T1, \T7 
+    adcx   \T3, \T6        
+    mulx   \T0, \T6, 16\M1 
+    adox   \T3, \T6 
+    adcx   \T5, \T0     
+    mulx   \T0, \T7, 24\M1   
+    adcx   \T2, \T0  
+    mulx   \T0, \T6, 32\M1     
+    adcx   \T4, \T0   
+    mulx   \T0, rdx, 40\M1     
+    adcx   \T0, rax 
+         
+    adox   \T5, \T7  
+    adox   \T2, \T6  
+    adox   \T4, rdx  
+    adox   \T0, rax           
+    
+    mov    rdx, 40\M0 
+    mulx   \T6, \T7, \M1 
+    xor    rax, rax
+    adcx   \T1, \T7 
+    mov    40\C, \T1           // C5_final 
+    adcx   \T3, \T6     
+    mulx   \T6, \T7, 8\M1
+    adox   \T3, \T7 
+    adcx   \T5, \T6        
+    mulx   \T1, \T6, 16\M1
+    adox   \T5, \T6 
+    adcx   \T2, \T1     
+    mulx   \T1, \T7, 24\M1   
+    adcx   \T4, \T1  
+    mulx   \T1, \T6, 32\M1     
+    adcx   \T0, \T1   
+    mulx   \T1, rdx, 40\M1     
+    adcx   \T1, rax 
+         
+    adox   \T2, \T7 
+    adox   \T4, \T6 
+    adox   \T0, rdx 
+    adox   \T1, rax 
+    mov    48\C, \T3 
+    mov    56\C, \T5 
+    mov    64\C, \T2 
+    mov    72\C, \T4
+    mov    80\C, \T0 
+    mov    88\C, \T1 
+.endm
+
+#else
+
+.macro MUL384_SCHOOL M0, M1, C, S, T0, T1, T2, T3, T4, T5, T6, T7 
+    mov    rdx, \M0
+    mulx   \T0, \T1, \M1    
+    mulx   \T2, \T3, 8\M1
+    mov    \C, \T1             // C0_final 
+    xor    rax, rax
+    mulx   \T4, \T5, 16\M1 
+    add    \T0, \T3               
+    adc    \T2, \T5     
+    mulx   \T1, \T3, 24\M1
+    adc    \T4, \T3         
+    mulx   \T5, \T6, 32\M1 
+    adc    \T1, \T6        
+    mulx   \T3, \T7, 40\M1    
+    adc    \T5, \T7       
+    adc    \T3, rax        
+    
+    mov    rdx, 8\M0 
+    mulx   \T6, \T7, \M1 
+    add    \T0, \T7 
+    mov    8\C, \T0            // C1_final 
+    adc    \T2, \T6     
+    mulx   \T6, \T7, 8\M1
+    mov    \S, \T7             // store T7
+    adc    \T4, \T6        
+    mulx   \T0, \T6, 16\M1   
+    mov    8\S, \T6            // store T6 
+    adc    \T0, \T1     
+    mulx   \T1, \T7, 24\M1   
+    adc    \T1, \T5  
+    mulx   \T5, \T6, 32\M1     
+    adc    \T3, \T5   
+    mulx   \T5, rdx, 40\M1
+    adc    \T5, rax 
+        
+    xor    rax, rax
+    add    \T2, \S 
+    adc    \T4, 8\S  
+    adc    \T0, \T7  
+    adc    \T1, \T6  
+    adc    \T3, rdx  
+    adc    \T5, rax         
+    
+    mov    rdx, 16\M0 
+    mulx   \T6, \T7, \M1 
+    add    \T2, \T7 
+    mov    16\C, \T2           // C2_final 
+    adc    \T4, \T6     
+    mulx   \T6, \T7, 8\M1
+    mov    \S, \T7             // store T7
+    adc    \T0, \T6        
+    mulx   \T2, \T6, 16\M1   
+    mov    8\S, \T6            // store T6 
+    adc    \T1, \T2     
+    mulx   \T2, \T7, 24\M1   
+    adc    \T3, \T2  
+    mulx   \T2, \T6, 32\M1     
+    adc    \T5, \T2   
+    mulx   \T2, rdx, 40\M1     
+    adc    \T2, rax 
+        
+    xor    rax, rax
+    add    \T4, \S 
+    adc    \T0, 8\S  
+    adc    \T1, \T7  
+    adc    \T3, \T6  
+    adc    \T5, rdx 
+    adc    \T2, rax           
+    
+    mov    rdx, 24\M0 
+    mulx   \T6, \T7, \M1 
+    add    \T4, \T7 
+    mov    24\C, \T4           // C3_final 
+    adc    \T0, \T6     
+    mulx   \T6, \T7, 8\M1
+    mov    \S, \T7             // store T7
+    adc    \T1, \T6        
+    mulx   \T4, \T6, 16\M1   
+    mov    8\S, \T6            // store T6 
+    adc    \T3, \T4     
+    mulx   \T4, \T7, 24\M1   
+    adc    \T5, \T4  
+    mulx   \T4, \T6, 32\M1     
+    adc    \T2, \T4   
+    mulx   \T4, rdx, 40\M1     
+    adc    \T4, rax
+        
+    xor    rax, rax
+    add    \T0, \S 
+    adc    \T1, 8\S  
+    adc    \T3, \T7  
+    adc    \T5, \T6  
+    adc    \T2, rdx  
+    adc    \T4, rax         
+    
+    mov    rdx, 32\M0 
+    mulx   \T6, \T7, \M1 
+    add    \T0, \T7 
+    mov    32\C, \T0           // C4_final 
+    adc    \T1, \T6     
+    mulx   \T6, \T7, 8\M1
+    mov    \S, \T7             // store T7
+    adc    \T3, \T6        
+    mulx   \T0, \T6, 16\M1   
+    mov    8\S, \T6            // store T6 
+    adc    \T5, \T0     
+    mulx   \T0, \T7, 24\M1   
+    adc    \T2, \T0  
+    mulx   \T0, \T6, 32\M1     
+    adc    \T4, \T0   
+    mulx   \T0, rdx, 40\M1     
+    adc    \T0, rax 
+        
+    xor    rax, rax
+    add    \T1, \S 
+    adc    \T3, 8\S  
+    adc    \T5, \T7  
+    adc    \T2, \T6  
+    adc    \T4, rdx  
+    adc    \T0, rax           
+    
+    mov    rdx, 40\M0 
+    mulx   \T6, \T7, \M1 
+    add    \T1, \T7 
+    mov    40\C, \T1           // C5_final 
+    adc    \T3, \T6     
+    mulx   \T6, \T7, 8\M1
+    mov    \S, \T7             // store T7
+    adc    \T5, \T6        
+    mulx   \T1, \T6, 16\M1   
+    mov    8\S, \T6            // store T6 
+    adc    \T2, \T1     
+    mulx   \T1, \T7, 24\M1   
+    adc    \T4, \T1  
+    mulx   \T1, \T6, 32\M1     
+    adc    \T0, \T1   
+    mulx   \T1, rdx, 40\M1     
+    adc    \T1, rax 
+        
+    add    \T3, \S 
+    adc    \T5, 8\S  
+    adc    \T2, \T7 
+    adc    \T4, \T6 
+    adc    \T0, rdx 
+    adc    \T1, 0 
+    mov    48\C, \T3 
+    mov    56\C, \T5 
+    mov    64\C, \T2 
+    mov    72\C, \T4
+    mov    80\C, \T0 
+    mov    88\C, \T1 
+.endm
+
+#endif
 
 .global fp_mul2
 fp_mul2:
   mov rdx, rdi
 .global fp_mul3
 fp_mul3:
-    push rbp
-    push rbx
+    push   r12
+    push   r13 
+    push   r14 
+    push   r15
+    mov    rcx, reg_p3 
 
-  addq [fp_mulsq_count+rip],1
+    // [rsp] <- AH + AL, rax <- mask
+    xor    rax, rax
+    mov    r8, [reg_p1]
+    mov    r9, [reg_p1+8]
+    mov    r10, [reg_p1+16]
+    mov    r11, [reg_p1+24] 
+    mov    r12, [reg_p1+32] 
+    mov    r13, [reg_p1+40] 
+    push   rbx 
+    push   rbp
+    sub    rsp, 152
+    add    r8, [reg_p1+48]
+    adc    r9, [reg_p1+56]
+    adc    r10, [reg_p1+64]
+    adc    r11, [reg_p1+72]
+    adc    r12, [reg_p1+80]
+    adc    r13, [reg_p1+88]
+    sbb    rax, 0
+    mov    [rsp], r8
+    mov    [rsp+8], r9
+    mov    [rsp+16], r10
+    mov    [rsp+24], r11
+    mov    [rsp+32], r12
+    mov    [rsp+40], r13
 
-  sub rsp,144
-  mov [rsp+136],rdi
-  mov rdi,rsi
-  mov rsi,rdx
+    // [rsp+48] <- BH + BL, rdx <- mask
+    xor    rdx, rdx
+    mov    r8, [reg_p2]
+    mov    r9, [reg_p2+8]
+    mov    rbx, [reg_p2+16]
+    mov    rbp, [reg_p2+24] 
+    mov    r14, [reg_p2+32]     
+    mov    r15, [reg_p2+40]     
+    add    r8, [reg_p2+48]
+    adc    r9, [reg_p2+56]
+    adc    rbx, [reg_p2+64]
+    adc    rbp, [reg_p2+72]
+    adc    r14, [reg_p2+80]
+    adc    r15, [reg_p2+88]
+    sbb    rdx, 0
+    mov    [rsp+48], r8
+    mov    [rsp+56], r9
+    mov    [rsp+64], rbx
+    mov    [rsp+72], rbp
+    mov    [rsp+80], r14     
+    mov    [rsp+88], r15     
+    
+    // [rcx] <- masked (BH + BL)
+    and    r8, rax
+    and    r9, rax
+    and    rbx, rax
+    and    rbp, rax
+    and    r14, rax     
+    and    r15, rax     
+    mov    [rcx], r8
+    mov    [rcx+8], r9
+    mov    [rcx+16], rbx    /////
+    mov    [rcx+24], rbp    /////
 
-  /* XXX: put directly into output */
-  xor rax,rax
-  mov [rsp+0],rax
-  mov [rsp+8],rax
-  mov [rsp+16],rax
-  mov [rsp+24],rax
-  mov [rsp+32],rax
-  mov [rsp+40],rax
-  mov [rsp+48],rax
-  mov [rsp+56],rax
-  mov [rsp+64],rax
-  mov [rsp+72],rax
-  mov [rsp+80],rax
-  mov [rsp+88],rax
-  mov [rsp+96],rax
-  mov [rsp+104],rax
-  mov [rsp+112],rax
-  mov [rsp+120],rax
-  mov [rsp+128],rax
+    // r8-r13 <- masked (AH + AL)
+    mov    r8, [rsp]
+    mov    r9, [rsp+8]
+    and    r8, rdx
+    and    r9, rdx
+    and    r10, rdx
+    and    r11, rdx
+    and    r12, rdx
+    and    r13, rdx
 
-.macro MULSTEP, k, I0, I1, I2, I3, I4, I5, I6, I7, I8, I9, I10, I11, I12, I13, I14, I15, I16
+    // [rsp+96] <- masked (AH + AL) + masked (AH + AL)
+    mov    rax, [rcx]
+    mov    rdx, [rcx+8]
+    add    r8, rax
+    adc    r9, rdx
+    adc    r10, rbx
+    adc    r11, rbp
+    adc    r12, r14         
+    adc    r13, r15         
+    mov    [rsp+96], r8
+    mov    [rsp+104], r9
+    mov    [rsp+112], r10
+    mov    [rsp+120], r11
 
-    mov r11,[rsp+\I0]
-    mov rdx, [rsi +  0]
-    mulx rcx, rdx, [rdi + 8*\k]
-    add rdx, r11
-    mulx rcx, rdx, [rip + .inv_min_p_mod_r]
+    // [rcx] <- AL x BL
+    MUL384_SCHOOL  [reg_p1], [reg_p2], [rcx], [rsp+128], r8, r9, r10, r11, rbx, rbp, r14, r15     // Result C0-C5 
 
-    xor rax, rax /* clear flags */
+    // [rcx+96] <- (AH+AL) x (BH+BL), low part 
+    MUL384_SCHOOL  [rsp], [rsp+48], [rcx+96], [rsp+128], r8, r9, r10, r11, rbx, rbp, r14, r15
 
-    mulx rbx, rax, [rip + uintbig_p +  0]
-    adox r11, rax
-    mov [rsp+\I0],r11
-
-    mov r11,[rsp+\I1]
-    mulx rcx, rax, [rip + uintbig_p + 8]
-    adcx r11, rbx
-    adox r11, rax
-    mov [rsp+\I1],r11
-
-    mov r11,[rsp+\I2]
-    mulx rbx, rax, [rip + uintbig_p + 16]
-    adcx r11, rcx
-    adox r11, rax
-    mov [rsp+\I2],r11
-
-    mov r11,[rsp+\I3]
-    mulx rcx, rax, [rip + uintbig_p + 24]
-    adcx r11, rbx
-    adox r11, rax
-    mov [rsp+\I3],r11
-
-    mov r11,[rsp+\I4]
-    mulx rbx, rax, [rip + uintbig_p + 32]
-    adcx r11, rcx
-    adox r11, rax
-    mov [rsp+\I4],r11
-
-    mov r11,[rsp+\I5]
-    mulx rcx, rax, [rip + uintbig_p + 40]
-    adcx r11, rbx
-    adox r11, rax
-    mov [rsp+\I5],r11
-
-    mov r11,[rsp+\I6]
-    mulx rbx, rax, [rip + uintbig_p + 48]
-    adcx r11, rcx
-    adox r11, rax
-    mov [rsp+\I6],r11
-
-    mov r11,[rsp+\I7]
-    mulx rcx, rax, [rip + uintbig_p + 56]
-    adcx r11, rbx
-    adox r11, rax
-    mov [rsp+\I7],r11
-
-    mov r11,[rsp+\I8]
-    mulx rbx, rax, [rip + uintbig_p + 64]
-    adcx r11, rcx
-    adox r11, rax
-    mov [rsp+\I8],r11
-
-    mov r11,[rsp+\I9]
-    mulx rcx, rax, [rip + uintbig_p + 72]
-    adcx r11, rbx
-    adox r11, rax
-    mov [rsp+\I9],r11
-
-    mov r11,[rsp+\I10]
-    mulx rbx, rax, [rip + uintbig_p + 80]
-    adcx r11, rcx
-    adox r11, rax
-    mov [rsp+\I10],r11
-
-    mov r11,[rsp+\I11]
-    mulx rcx, rax, [rip + uintbig_p + 88]
-    adcx r11, rbx
-    adox r11, rax
-    mov [rsp+\I11],r11
-
-    mov r11,[rsp+\I12]
-    mulx rbx, rax, [rip + uintbig_p + 96]
-    adcx r11, rcx
-    adox r11, rax
-    mov [rsp+\I12],r11
-
-    mov r11,[rsp+\I13]
-    mulx rcx, rax, [rip + uintbig_p + 104]
-    adcx r11, rbx
-    adox r11, rax
-    mov [rsp+\I13],r11
-
-    mov r11,[rsp+\I14]
-    mulx rbx, rax, [rip + uintbig_p + 112]
-    adcx r11, rcx
-    adox r11, rax
-    mov [rsp+\I14],r11
-
-    mov r11,[rsp+\I15]
-    mulx rcx, rax, [rip + uintbig_p + 120]
-    adcx r11, rbx
-    adox r11, rax
-    mov [rsp+\I15],r11
-
-    mov r11,[rsp+\I16]
-    mov rax, 0
-    adcx r11, rcx
-    adox r11, rax
-    mov [rsp+\I16],r11
-
-    mov rdx, [rdi + 8*\k]
-
-    xor rax, rax /* clear flags */
-
-    mov r11,[rsp+\I0]
-    mulx rbx, rax, [rsi +  0]
-    adox r11, rax
-    mov [rsp+\I0],r11
-
-    mov r11,[rsp+\I1]
-    mulx rcx, rax, [rsi + 8]
-    adcx r11, rbx
-    adox r11, rax
-    mov [rsp+\I1],r11
-
-    mov r11,[rsp+\I2]
-    mulx rbx, rax, [rsi + 16]
-    adcx r11, rcx
-    adox r11, rax
-    mov [rsp+\I2],r11
-
-    mov r11,[rsp+\I3]
-    mulx rcx, rax, [rsi + 24]
-    adcx r11, rbx
-    adox r11, rax
-    mov [rsp+\I3],r11
-
-    mov r11,[rsp+\I4]
-    mulx rbx, rax, [rsi + 32]
-    adcx r11, rcx
-    adox r11, rax
-    mov [rsp+\I4],r11
-
-    mov r11,[rsp+\I5]
-    mulx rcx, rax, [rsi + 40]
-    adcx r11, rbx
-    adox r11, rax
-    mov [rsp+\I5],r11
-
-    mov r11,[rsp+\I6]
-    mulx rbx, rax, [rsi + 48]
-    adcx r11, rcx
-    adox r11, rax
-    mov [rsp+\I6],r11
-
-    mov r11,[rsp+\I7]
-    mulx rcx, rax, [rsi + 56]
-    adcx r11, rbx
-    adox r11, rax
-    mov [rsp+\I7],r11
-
-    mov r11,[rsp+\I8]
-    mulx rbx, rax, [rsi + 64]
-    adcx r11, rcx
-    adox r11, rax
-    mov [rsp+\I8],r11
-
-    mov r11,[rsp+\I9]
-    mulx rcx, rax, [rsi + 72]
-    adcx r11, rbx
-    adox r11, rax
-    mov [rsp+\I9],r11
-
-    mov r11,[rsp+\I10]
-    mulx rbx, rax, [rsi + 80]
-    adcx r11, rcx
-    adox r11, rax
-    mov [rsp+\I10],r11
-
-    mov r11,[rsp+\I11]
-    mulx rcx, rax, [rsi + 88]
-    adcx r11, rbx
-    adox r11, rax
-    mov [rsp+\I11],r11
-
-    mov r11,[rsp+\I12]
-    mulx rbx, rax, [rsi + 96]
-    adcx r11, rcx
-    adox r11, rax
-    mov [rsp+\I12],r11
-
-    mov r11,[rsp+\I13]
-    mulx rcx, rax, [rsi + 104]
-    adcx r11, rbx
-    adox r11, rax
-    mov [rsp+\I13],r11
-
-    mov r11,[rsp+\I14]
-    mulx rbx, rax, [rsi + 112]
-    adcx r11, rcx
-    adox r11, rax
-    mov [rsp+\I14],r11
-
-    mov r11,[rsp+\I15]
-    mulx rcx, rax, [rsi + 120]
-    adcx r11, rbx
-    adox r11, rax
-    mov [rsp+\I15],r11
-
-    mov r11,[rsp+\I16]
-    mov rax, 0
-    adcx r11, rcx
-    adox r11, rax
-    mov [rsp+\I16],r11
-
-.endm
-
-    MULSTEP 0, 8, 16, 24, 32, 40, 48, 56, 64, 72, 80, 88, 96, 104, 112, 120, 128, 0
-    MULSTEP 1, 16, 24, 32, 40, 48, 56, 64, 72, 80, 88, 96, 104, 112, 120, 128, 0, 8
-    MULSTEP 2, 24, 32, 40, 48, 56, 64, 72, 80, 88, 96, 104, 112, 120, 128, 0, 8, 16
-    MULSTEP 3, 32, 40, 48, 56, 64, 72, 80, 88, 96, 104, 112, 120, 128, 0, 8, 16, 24
-    MULSTEP 4, 40, 48, 56, 64, 72, 80, 88, 96, 104, 112, 120, 128, 0, 8, 16, 24, 32
-    MULSTEP 5, 48, 56, 64, 72, 80, 88, 96, 104, 112, 120, 128, 0, 8, 16, 24, 32, 40
-    MULSTEP 6, 56, 64, 72, 80, 88, 96, 104, 112, 120, 128, 0, 8, 16, 24, 32, 40, 48
-    MULSTEP 7, 64, 72, 80, 88, 96, 104, 112, 120, 128, 0, 8, 16, 24, 32, 40, 48, 56
-    MULSTEP 8, 72, 80, 88, 96, 104, 112, 120, 128, 0, 8, 16, 24, 32, 40, 48, 56, 64
-    MULSTEP 9, 80, 88, 96, 104, 112, 120, 128, 0, 8, 16, 24, 32, 40, 48, 56, 64, 72
-    MULSTEP 10, 88, 96, 104, 112, 120, 128, 0, 8, 16, 24, 32, 40, 48, 56, 64, 72, 80
-    MULSTEP 11, 96, 104, 112, 120, 128, 0, 8, 16, 24, 32, 40, 48, 56, 64, 72, 80, 88
-    MULSTEP 12, 104, 112, 120, 128, 0, 8, 16, 24, 32, 40, 48, 56, 64, 72, 80, 88, 96
-    MULSTEP 13, 112, 120, 128, 0, 8, 16, 24, 32, 40, 48, 56, 64, 72, 80, 88, 96, 104
-    MULSTEP 14, 120, 128, 0, 8, 16, 24, 32, 40, 48, 56, 64, 72, 80, 88, 96, 104, 112
-    MULSTEP 15, 128, 0, 8, 16, 24, 32, 40, 48, 56, 64, 72, 80, 88, 96, 104, 112, 120
-
-    mov rdi,[rsp+136]
-
-    mov r11,[rsp+0]
-    mov [rdi+0],r11
-    mov r11,[rsp+8]
-    mov [rdi+8],r11
-    mov r11,[rsp+16]
-    mov [rdi+16],r11
-    mov r11,[rsp+24]
-    mov [rdi+24],r11
-    mov r11,[rsp+32]
-    mov [rdi+32],r11
-    mov r11,[rsp+40]
-    mov [rdi+40],r11
-    mov r11,[rsp+48]
-    mov [rdi+48],r11
-    mov r11,[rsp+56]
-    mov [rdi+56],r11
-    mov r11,[rsp+64]
-    mov [rdi+64],r11
-    mov r11,[rsp+72]
-    mov [rdi+72],r11
-    mov r11,[rsp+80]
-    mov [rdi+80],r11
-    mov r11,[rsp+88]
-    mov [rdi+88],r11
-    mov r11,[rsp+96]
-    mov [rdi+96],r11
-    mov r11,[rsp+104]
-    mov [rdi+104],r11
-    mov r11,[rsp+112]
-    mov [rdi+112],r11
-    mov r11,[rsp+120]
-    mov [rdi+120],r11
-
-    add rsp,144
-
-    pop rbx
-    pop rbp
+    // [rsp] <- AH x BH 
+    MUL384_SCHOOL  [reg_p1+48], [reg_p2+48], [rsp], [rsp+128], r8, r9, r10, r11, rbx, rbp, r14, r15
+    
+    // r8-r13 <- (AH+AL) x (BH+BL), final step
+    mov    r8, [rsp+96]
+    mov    r9, [rsp+104]
+    mov    r10, [rsp+112]
+    mov    r11, [rsp+120]
+    mov    rax, [rcx+144]
+    add    r8, rax
+    mov    rax, [rcx+152]
+    adc    r9, rax
+    mov    rax, [rcx+160]
+    adc    r10, rax
+    mov    rax, [rcx+168]
+    adc    r11, rax
+    mov    rax, [rcx+176]
+    adc    r12, rax
+    mov    rax, [rcx+184]
+    adc    r13, rax
+    
+    // rdi,rdx,rbx,rbp,r14,r15,r8-r13 <- (AH+AL) x (BH+BL) - ALxBL
+    mov    rdi, [rcx+96]
+    sub    rdi, [rcx]
+    mov    rdx, [rcx+104]
+    sbb    rdx, [rcx+8]
+    mov    rbx, [rcx+112]
+    sbb    rbx, [rcx+16]
+    mov    rbp, [rcx+120]
+    sbb    rbp, [rcx+24]
+    mov    r14, [rcx+128]     
+    sbb    r14, [rcx+32]   
+    mov    r15, [rcx+136]     
+    sbb    r15, [rcx+40]     
+    sbb    r8, [rcx+48]
+    sbb    r9, [rcx+56]
+    sbb    r10, [rcx+64]
+    sbb    r11, [rcx+72]
+    sbb    r12, [rcx+80]
+    sbb    r13, [rcx+88]
+    
+    // rdi,rdx,rbx,rbp,r14,r15,r8-r13 <- (AH+AL) x (BH+BL) - ALxBL - AHxBH
+    sub    rdi, [rsp]
+    sbb    rdx, [rsp+8]
+    sbb    rbx, [rsp+16]
+    sbb    rbp, [rsp+24]
+    sbb    r14, [rsp+32]     
+    sbb    r15, [rsp+40]   
+    sbb    r8, [rsp+48]
+    sbb    r9, [rsp+56]
+    sbb    r10, [rsp+64]
+    sbb    r11, [rsp+72]
+    sbb    r12, [rsp+80]
+    sbb    r13, [rsp+88]
+    
+    mov    rax, [rcx+48]
+    add    rax, rdi
+    mov    [rcx+48], rax    // Result C6-C11
+    mov    rax, [rcx+56]
+    adc    rax, rdx
+    mov    [rcx+56], rax 
+    mov    rax, [rcx+64]
+    adc    rax, rbx
+    mov    [rcx+64], rax 
+    mov    rax, [rcx+72]
+    adc    rax, rbp
+    mov    [rcx+72], rax 
+    mov    rax, [rcx+80]
+    adc    rax, r14           
+    mov    [rcx+80], rax 
+    mov    rax, [rcx+88]
+    adc    rax, r15             
+    mov    [rcx+88], rax
+    mov    rax, [rsp]
+    adc    r8, rax 
+    mov    [rcx+96], r8    // Result C8-C15
+    mov    rax, [rsp+8]
+    adc    r9, rax
+    mov    [rcx+104], r9 
+    mov    rax, [rsp+16]
+    adc    r10, rax
+    mov    [rcx+112], r10 
+    mov    rax, [rsp+24]
+    adc    r11, rax
+    mov    [rcx+120], r11 
+    mov    rax, [rsp+32]
+    adc    r12, rax
+    mov    [rcx+128], r12 
+    mov    rax, [rsp+40]
+    adc    r13, rax
+    mov    [rcx+136], r13
+    mov    r8, [rsp+48]
+    mov    r9, [rsp+56]
+    mov    r10, [rsp+64]
+    mov    r11, [rsp+72]
+    mov    r12, [rsp+80]
+    mov    r13, [rsp+88]
+    adc    r8, 0
+    adc    r9, 0
+    adc    r10, 0
+    adc    r11, 0
+    adc    r12, 0
+    adc    r13, 0
+    add    rsp, 152   
+    mov    [rcx+144], r8 
+    mov    [rcx+152], r9 
+    mov    [rcx+160], r10 
+    mov    [rcx+168], r11 
+    mov    [rcx+176], r12 
+    mov    [rcx+184], r13 
+     
+    pop    rbp  
+    pop    rbx
+    pop    r15
+    pop    r14
+    pop    r13
+    pop    r12
     jmp .reduce_once
 
 .global fp_sq1
