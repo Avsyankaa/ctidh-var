@@ -5,6 +5,12 @@
 #include "uintbig_namespace.h"
 #include "fp_namespace.h"
 
+// Registers that are used for parameter passing:
+#define reg_p1  rdi
+#define reg_p2  rsi
+#define reg_p3  rdx
+
+
 .section .rodata
 
 .set pbits,511
@@ -188,151 +194,386 @@ fp_sub3:
     ret
 
 
-/* Montgomery arithmetic */
+#ifdef _MULX_
+    
+///////////////////////////////////////////////////////////////// MACRO
+// Schoolbook integer multiplication
+// Inputs:  memory pointers M0 and M1
+// Outputs: memory pointer C and regs T1, T3, rax
+// Temps:   regs T0:T6
+/////////////////////////////////////////////////////////////////
+
+#ifdef _ADX_
+.macro MUL192_SCHOOL M0, M1, C, T0, T1, T2, T3, T4, T5, T6
+    mov    rdx, \M0
+    mulx   \T0, \T1, \M1     // T0:T1 = A0*B0
+    mov    \C, \T1           // C0_final
+    mulx   \T1, \T2, 8\M1    // T1:T2 = A0*B1
+    xor    rax, rax   
+    adox   \T0, \T2        
+    mulx   \T2, \T3, 16\M1   // T2:T3 = A0*B2
+    adox   \T1, \T3
+           
+    mov    rdx, 8\M0
+    mulx   \T3, \T4, \M1     // T3:T4 = A1*B0
+    adox   \T2, rax 
+    xor    rax, rax   
+    mulx   \T5, \T6, 8\M1    // T5:T6 = A1*B1
+    adox   \T4, \T0
+    mov    8\C, \T4          // C1_final  
+    adcx   \T3, \T6      
+    mulx   \T6, \T0, 16\M1   // T6:T0 = A1*B2 
+    adox   \T3, \T1  
+    adcx   \T5, \T0     
+    adcx   \T6, rax 
+    adox   \T5, \T2	
+    
+    mov    rdx, 16\M0
+    mulx   \T1, \T0, \M1     // T1:T0 = A2*B0
+    adox   \T6, rax
+    xor    rax, rax 
+    mulx   \T4, \T2, 8\M1    // T4:T2 = A2*B1
+    adox   \T0, \T3   
+    mov    16\C, \T0         // C2_final 
+    adcx   \T1, \T5    
+    mulx   \T0, \T3, 16\M1   // T0:T3 = A2*B2
+    adcx   \T4, \T6  
+    adcx   \T0, rax
+    adox   \T1, \T2
+    adox   \T3, \T4
+    adox   rax, \T0
+.endm 
+    
+///////////////////////////////////////////////////////////////// MACRO
+// Schoolbook integer multiplication
+// Inputs:  memory pointers M0 and M1
+// Outputs: memory pointer C
+// Temps:   regs T0:T9
+/////////////////////////////////////////////////////////////////
+
+.macro MUL256_SCHOOL M0, M1, C, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9
+    mov    rdx, \M0
+    mulx   \T0, \T1, \M1     // T0:T1 = A0*B0
+    mov    \C, \T1           // C0_final
+    mulx   \T1, \T2, 8\M1    // T1:T2 = A0*B1
+    xor    rax, rax   
+    adox   \T0, \T2        
+    mulx   \T2, \T3, 16\M1   // T2:T3 = A0*B2
+    adox   \T1, \T3        
+    mulx   \T3, \T4, 24\M1   // T3:T4 = A0*B3
+    adox   \T2, \T4 
+           
+    mov    rdx, 8\M0
+    mulx   \T5, \T4, \M1     // T5:T4 = A1*B0
+    adox   \T3, rax 
+    xor    rax, rax   
+    mulx   \T6, \T7, 8\M1    // T6:T7 = A1*B1
+    adox   \T4, \T0
+    mov    8\C, \T4          // C1_final  
+    adcx   \T5, \T7      
+    mulx   \T7, \T8, 16\M1   // T7:T8 = A1*B2
+    adcx   \T6, \T8  
+    adox   \T5, \T1      
+    mulx   \T8, \T9, 24\M1   // T8:T9 = A1*B3
+    adcx   \T7, \T9        
+    adcx   \T8, rax   
+    adox   \T6, \T2
+    
+    mov    rdx, 16\M0
+    mulx   \T1, \T0, \M1     // T1:T0 = A2*B0
+    adox   \T7, \T3
+    adox   \T8, rax
+    xor    rax, rax 
+    mulx   \T2, \T3, 8\M1    // T2:T3 = A2*B1
+    adox   \T0, \T5   
+    mov    16\C, \T0         // C2_final 
+    adcx   \T1, \T3    
+    mulx   \T3, \T4, 16\M1   // T3:T4 = A2*B2
+    adcx   \T2, \T4 
+    adox   \T1, \T6       
+    mulx   \T4,\T9, 24\M1    // T3:T4 = A2*B3
+    adcx   \T3, \T9        
+    mov    rdx, 24\M0
+    adcx   \T4, rax         
+
+    adox   \T2, \T7
+    adox   \T3, \T8
+    adox   \T4, rax
+
+    mulx   \T5, \T0, \M1     // T5:T0 = A3*B0
+    xor    rax, rax 
+    mulx   \T6, \T7, 8\M1    // T6:T7 = A3*B1
+    adcx   \T5, \T7 
+    adox   \T1, \T0       
+    mulx   \T7, \T8, 16\M1   // T7:T8 = A3*B2
+    adcx   \T6, \T8  
+    adox   \T2, \T5      
+    mulx   \T8, \T9, 24\M1   // T8:T9 = A3*B3
+    adcx   \T7, \T9        
+    adcx   \T8, rax         
+
+    adox   \T3, \T6
+    adox   \T4, \T7
+    adox   \T8, rax
+    mov    24\C, \T1         // C3_final
+    mov    32\C, \T2         // C4_final
+    mov    40\C, \T3         // C5_final
+    mov    48\C, \T4         // C6_final
+    mov    56\C, \T8         // C7_final
+.endm 
+
+#else
+
+.macro MUL192_SCHOOL M0, M1, C, T0, T1, T2, T3, T4, T5, T6
+    mov    rdx, \M0
+    mulx   \T0, \T1, \M1     // T0:T1 = A0*B0
+    mov    \C, \T1           // C0_final
+    mulx   \T1, \T2, 8\M1    // T1:T2 = A0*B1
+    add    \T0, \T2        
+    mulx   \T2, \T3, 16\M1   // T2:T3 = A0*B2
+    adc    \T1, \T3
+           
+    mov    rdx, 8\M0
+    mulx   \T3, \T4, \M1     // T3:T4 = A1*B0
+    adc    \T2, 0   
+    mulx   \T5, \T6, 8\M1    // T5:T6 = A1*B1
+    add    \T4, \T0
+    mov    8\C, \T4          // C1_final
+    adc    \T3, \T1  
+    adc    \T5, \T2	    
+    mulx   \T2, \T1, 16\M1   // T2:T1 = A1*B2
+    adc    \T2, 0    
+
+    add    \T3, \T6  
+    adc    \T5, \T1     
+    adc    \T2, 0
+    
+    mov    rdx, 16\M0
+    mulx   \T1, \T0, \M1     // T1:T0 = A2*B0
+    add    \T0, \T3   
+    mov    16\C, \T0         // C2_final 
+    mulx   \T4, \T6, 8\M1    // T4:T6 = A2*B1
+    adc    \T1, \T5    
+    adc    \T2, \T4 
+    mulx   rax, \T3, 16\M1   // rax:T3 = A2*B2 
+    adc    rax, 0
+    add    \T1, \T6
+    adc    \T3, \T2
+    adc    rax, 0
+.endm 
+
+.macro MUL256_SCHOOL M0, M1, C, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9
+    mov    rdx, \M0
+    mulx   \T0, \T1, \M1     // T0:T1 = A0*B0
+    mov    \C, \T1           // C0_final
+    mulx   \T1, \T2, 8\M1    // T1:T2 = A0*B1
+    add    \T0, \T2        
+    mulx   \T2, \T3, 16\M1   // T2:T3 = A0*B2
+    adc    \T1, \T3         
+    mulx   \T3, \T4, 24\M1   // T3:T4 = A0*B3
+    adc    \T2, \T4        
+    mov    rdx, 8\M0
+    adc    \T3, 0         
+
+    mulx   \T5, \T4, \M1     // T5:T4 = A1*B0
+    mulx   \T6, \T7, 8\M1    // T6:T7 = A1*B1
+    add    \T5, \T7        
+    mulx   \T7, \T8, 16\M1   // T7:T8 = A1*B2
+    adc    \T6, \T8        
+    mulx   \T8, \T9, 24\M1   // T8:T9 = A1*B3
+    adc    \T7, \T9        
+    adc    \T8, 0         
+
+    add    \T4, \T0
+    mov    8\C, \T4          // C1_final
+    adc    \T5, \T1
+    adc    \T6, \T2
+    adc    \T7, \T3
+    mov    rdx, 16\M0
+    adc    \T8, 0
+
+    mulx   \T1, \T0, \M1     // T1:T0 = A2*B0
+    mulx   \T2, \T3, 8\M1    // T2:T3 = A2*B1
+    add    \T1, \T3        
+    mulx   \T3, \T4, 16\M1   // T3:T4 = A2*B2
+    adc    \T2, \T4        
+    mulx   \T4,\T9, 24\M1    // T3:T4 = A2*B3
+    adc    \T3, \T9        
+    mov    rdx, 24\M0
+    adc    \T4, 0          
+
+    add    \T0, \T5
+    mov    16\C, \T0         // C2_final
+    adc    \T1, \T6
+    adc    \T2, \T7
+    adc    \T3, \T8
+    adc    \T4, 0
+
+    mulx   \T5, \T0, \M1     // T5:T0 = A3*B0
+    mulx   \T6, \T7, 8\M1    // T6:T7 = A3*B1
+    add    \T5, \T7        
+    mulx   \T7, \T8, 16\M1   // T7:T8 = A3*B2
+    adc    \T6, \T8        
+    mulx   \T8, \T9, 24\M1   // T8:T9 = A3*B3
+    adc    \T7, \T9         
+    adc    \T8, 0         
+
+    add    \T1, \T0
+    mov    24\C, \T1         // C3_final
+    adc    \T2, \T5
+    mov    32\C, \T2         // C4_final
+    adc    \T3, \T6
+    mov    40\C, \T3         // C5_final
+    adc    \T4, \T7
+    mov    48\C, \T4         // C6_final
+    adc    \T8, 0
+    mov    56\C, \T8         // C7_final
+.endm
+#endif
 
 .global fp_mul2
 fp_mul2:
   mov rdx, rdi
 .global fp_mul3
 fp_mul3:
-    push rbp
-    push rbx
-    push r12
-    push r13
-    push r14
-    push r15
+    push   r12
+    push   r13 
+    push   r14 
+    push   r15
+    mov    rcx, reg_p3 
 
-    push rdi
+    // r8-r11 <- AH + AL, rax <- mask
+    xor    rax, rax
+    mov    r8, [reg_p1]
+    mov    r9, [reg_p1+8]
+    mov    r10, [reg_p1+16]
+    mov    r11, [reg_p1+24] 
+    push   rbx 
+    push   rbp
+    sub    rsp, 96
+    add    r8, [reg_p1+32]
+    adc    r9, [reg_p1+40]
+    adc    r10, [reg_p1+48]
+    adc    r11, 0
+    sbb    rax, 0
+    mov    [rsp], r8
+    mov    [rsp+8], r9
+    mov    [rsp+16], r10
+    mov    [rsp+24], r11
 
-    addq [fp_mulsq_count+rip],1
+    // r12-r15 <- BH + BL, rbx <- mask
+    xor    rbx, rbx
+    mov    r12, [reg_p2]
+    mov    r13, [reg_p2+8]
+    mov    r14, [reg_p2+16]
+    mov    r15, [reg_p2+24]
+    add    r12, [reg_p2+32]
+    adc    r13, [reg_p2+40]
+    adc    r14, [reg_p2+48]
+    adc    r15, 0
+    sbb    rbx, 0
+    mov    [rsp+32], r12
+    mov    [rsp+40], r13
+    mov    [rsp+48], r14
+    mov    [rsp+56], r15
+    
+    // r12-r15 <- masked (BH + BL)
+    and    r12, rax
+    and    r13, rax
+    and    r14, rax
+    and    r15, rax
 
-    mov rdi, rsi
-    mov rsi, rdx
+    // r8-r11 <- masked (AH + AL)
+    and    r8, rbx
+    and    r9, rbx
+    and    r10, rbx
+    and    r11, rbx
 
-    xor r8,  r8
-    xor r9,  r9
-    xor r10, r10
-    xor r11, r11
-    xor r12, r12
-    xor r13, r13
-    xor r14, r14
-    xor r15, r15
-    xor rbp, rbp
+    // r8-r11 <- masked (AH + AL) + masked (AH + AL)
+    add    r8, r12
+    adc    r9, r13
+    adc    r10, r14
+    adc    r11, r15
+    mov    [rsp+64], r8
+    mov    [rsp+72], r9
+    mov    [rsp+80], r10
+    mov    [rsp+88], r11
 
-    /* flags are already cleared */
+    // [rsp] <- (AH+AL) x (BH+BL), low part 
+    MUL256_SCHOOL  [rsp], [rsp+32], [rsp], r8, r9, r10, r11, r12, r13, r14, r15, rbx, rbp 
 
-.macro MULSTEP, k, r0, r1, r2, r3, r4, r5, r6, r7, r8
+    // [rcx] <- AL x BL
+    MUL256_SCHOOL  [reg_p1], [reg_p2], [rcx], r8, r9, r10, r11, r12, r13, r14, r15, rbx, rbp     // Result C0-C3
 
-    mov rdx, [rsi +  0]
-    mulx rcx, rdx, [rdi + 8*\k]
-    add rdx, \r0
-    mulx rcx, rdx, [rip + .inv_min_p_mod_r]
-
-    xor rax, rax /* clear flags */
-
-    mulx rbx, rax, [rip + uintbig_p +  0]
-    adox \r0, rax
-
-    mulx rcx, rax, [rip + uintbig_p +  8]
-    adcx \r1, rbx
-    adox \r1, rax
-
-    mulx rbx, rax, [rip + uintbig_p + 16]
-    adcx \r2, rcx
-    adox \r2, rax
-
-    mulx rcx, rax, [rip + uintbig_p + 24]
-    adcx \r3, rbx
-    adox \r3, rax
-
-    mulx rbx, rax, [rip + uintbig_p + 32]
-    adcx \r4, rcx
-    adox \r4, rax
-
-    mulx rcx, rax, [rip + uintbig_p + 40]
-    adcx \r5, rbx
-    adox \r5, rax
-
-    mulx rbx, rax, [rip + uintbig_p + 48]
-    adcx \r6, rcx
-    adox \r6, rax
-
-    mulx rcx, rax, [rip + uintbig_p + 56]
-    adcx \r7, rbx
-    adox \r7, rax
-
-    mov rax, 0
-    adcx \r8, rcx
-    adox \r8, rax
-
-
-    mov rdx, [rdi + 8*\k]
-
-    xor rax, rax /* clear flags */
-
-    mulx rbx, rax, [rsi +  0]
-    adox \r0, rax
-
-    mulx rcx, rax, [rsi +  8]
-    adcx \r1, rbx
-    adox \r1, rax
-
-    mulx rbx, rax, [rsi + 16]
-    adcx \r2, rcx
-    adox \r2, rax
-
-    mulx rcx, rax, [rsi + 24]
-    adcx \r3, rbx
-    adox \r3, rax
-
-    mulx rbx, rax, [rsi + 32]
-    adcx \r4, rcx
-    adox \r4, rax
-
-    mulx rcx, rax, [rsi + 40]
-    adcx \r5, rbx
-    adox \r5, rax
-
-    mulx rbx, rax, [rsi + 48]
-    adcx \r6, rcx
-    adox \r6, rax
-
-    mulx rcx, rax, [rsi + 56]
-    adcx \r7, rbx
-    adox \r7, rax
-
-    mov rax, 0
-    adcx \r8, rcx
-    adox \r8, rax
-
-.endm
-
-    MULSTEP 0, r8,  r9,  r10, r11, r12, r13, r14, r15, rbp
-    MULSTEP 1, r9,  r10, r11, r12, r13, r14, r15, rbp, r8
-    MULSTEP 2, r10, r11, r12, r13, r14, r15, rbp, r8,  r9
-    MULSTEP 3, r11, r12, r13, r14, r15, rbp, r8,  r9,  r10
-    MULSTEP 4, r12, r13, r14, r15, rbp, r8,  r9,  r10, r11
-    MULSTEP 5, r13, r14, r15, rbp, r8,  r9,  r10, r11, r12
-    MULSTEP 6, r14, r15, rbp, r8,  r9,  r10, r11, r12, r13
-    MULSTEP 7, r15, rbp, r8,  r9,  r10, r11, r12, r13, r14
-
-    pop rdi
-
-    mov [rdi +  0], rbp
-    mov [rdi +  8], r8
-    mov [rdi + 16], r9
-    mov [rdi + 24], r10
-    mov [rdi + 32], r11
-    mov [rdi + 40], r12
-    mov [rdi + 48], r13
-    mov [rdi + 56], r14
-
-    pop r15
-    pop r14
-    pop r13
-    pop r12
-    pop rbx
-    pop rbp
+    // [rcx+64], rbx, rbp, rax <- AH x BH 
+    MUL192_SCHOOL  [reg_p1+32], [reg_p2+32], [rcx+64], r8, rbx, r10, rbp, r12, r13, r14
+    
+    // r8-r11 <- (AH+AL) x (BH+BL), final step
+    mov    r8, [rsp+64]
+    mov    r9, [rsp+72]
+    mov    r10, [rsp+80]
+    mov    r11, [rsp+88]
+    mov    rdx, [rsp+32]
+    add    r8, rdx
+    mov    rdx, [rsp+40]
+    adc    r9, rdx
+    mov    rdx, [rsp+48]
+    adc    r10, rdx
+    mov    rdx, [rsp+56]
+    adc    r11, rdx
+    
+    // r8-r15 <- (AH+AL) x (BH+BL) - ALxBL
+    mov    r12, [rsp]
+    mov    r13, [rsp+8]
+    mov    r14, [rsp+16]
+    mov    r15, [rsp+24]
+    sub    r12, [rcx]
+    sbb    r13, [rcx+8]
+    sbb    r14, [rcx+16]
+    sbb    r15, [rcx+24]
+    sbb    r8, [rcx+32]
+    sbb    r9, [rcx+40]
+    sbb    r10, [rcx+48]
+    sbb    r11, [rcx+56]
+    
+    // r8-r15 <- (AH+AL) x (BH+BL) - ALxBL - AHxBH
+    sub    r12, [rcx+64]
+    sbb    r13, [rcx+72]
+    sbb    r14, [rcx+80]
+    sbb    r15, rbx
+    sbb    r8, rbp
+    sbb    r9, rax
+    sbb    r10, 0
+    sbb    r11, 0
+    
+    add    r12, [rcx+32]
+    mov    [rcx+32], r12    // Result C4-C7
+    adc    r13, [rcx+40]
+    mov    [rcx+40], r13 
+    adc    r14, [rcx+48]
+    mov    [rcx+48], r14 
+    adc    r15, [rcx+56]
+    mov    [rcx+56], r15
+    adc    r8, [rcx+64] 
+    mov    [rcx+64], r8    // Result C8-C15
+    adc    r9, [rcx+72]
+    mov    [rcx+72], r9 
+    adc    r10, [rcx+80]
+    mov    [rcx+80], r10
+    adc    r11, rbx
+    mov    [rcx+88], r11
+    adc    rbp, 0
+    mov    [rcx+96], rbp 
+    adc    rax, 0
+    mov    [rcx+104], rax
+    
+    add    rsp, 96    
+    pop    rbp  
+    pop    rbx
+    pop    r15
+    pop    r14
+    pop    r13
+    pop    r12
     jmp .reduce_once
 
 .global fp_sq1
